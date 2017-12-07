@@ -1,12 +1,12 @@
 const _ = require('underscore')
 const expectThrow = require('./utils').expectThrow
-
 const EtherSportGame = artifacts.require('EtherSportGame')
-
+const chalk = require('chalk')
 
 let instance
 let _startBlock
 let _owner
+let _lotter
 let _escMigrateFrom
 let _other
 let _defaultBlockHeightDiff = [44800,    57600, 57867, 64267, 108954,    243018]
@@ -17,7 +17,7 @@ const customContractFunctionCall = (_userAddress, _func, _funcData, _wei, asyncC
     const contractAbi = web3.eth.contract(instance.abi);
     const myContract = contractAbi.at(instance.address);
     //finally pass this data parameter to send Transaction
-    console.log('going to', _funcData !== "___empty___" ? 'call fn with args: '+JSON.stringify(_funcData) : 'send eth', _userAddress, 'to', instance.address);
+    console.log('going to', _funcData !== "___empty___" ? `call fn ${chalk.green(_func)} with args: `+JSON.stringify(_funcData) : 'send eth', chalk.grey(`${_userAddress} to ${instance.address}`));
     // suppose you want to call a function named myFunction of myContract
     let getData;
     if(_funcData === '___empty___') {
@@ -33,20 +33,21 @@ const customContractFunctionCall = (_userAddress, _func, _funcData, _wei, asyncC
         value: _wei,
         gas: 3000000
     }, async (err, transactionHash) => {
-        asyncCallback(err, resolve, reject)
+        asyncCallback(err, resolve, reject, transactionHash)
     });
 })
 
-const asyncBlank =  async (err, resolve, reject) => {
+const asyncBlank =  async (err, resolve, reject, transactionHash) => {
     if (err) return reject(err)
-    resolve();
+    resolve(transactionHash);
 }
 contract('EtherSportGame', function (accounts) {
     console.log('=contract EtherSport accounts:', accounts)
 
     _owner = accounts[0]
     _escMigrateFrom = accounts[1]
-    _other = accounts[2]
+    _lotter = accounts[2]
+    _other = accounts[3]
 
     beforeEach(async () => {
         instance = await EtherSportGame.new(accounts[1]);
@@ -70,13 +71,55 @@ contract('EtherSportGame', function (accounts) {
     })
 
     describe('Lotter permission:', () => {
-        it('should ✅ successfully grant lotter permission', () => {})
-        it('should ✅ successfully revoke lotter permission', () => {})
-        it('should ❌ fail', () => {})
+        it('should ✅ successfully grant lotter permission', async () => {
+            assert.deepEqual(await instance.lotters.call(_lotter), false, 'user should not have lotter role')
+            await customContractFunctionCall(_owner, 'grantLotter', [_lotter] , 0, asyncBlank) // GRANT
+            assert.deepEqual(await instance.lotters.call(_lotter), true, 'user should have lotter role')
+            assert.deepEqual(await instance.lotters.call(_owner), false, 'user should not have lotter role')
+        })
+        it('should ✅ successfully revoke lotter permission', async () => {
+            await customContractFunctionCall(_owner, 'grantLotter', [_lotter] , 0, asyncBlank)
+            assert.deepEqual(await instance.lotters.call(_lotter), true, 'user should have lotter role')
+            await customContractFunctionCall(_owner, 'revokeLotter', [_lotter] , 0, asyncBlank) //REVOKE
+            assert.deepEqual(await instance.lotters.call(_lotter), false, 'user should not have lotter role')
+        })
+        it('should ❌ fail when not owner try to grant permission', async () => {
+            return expectThrow(customContractFunctionCall(_lotter, 'grantLotter', [_lotter] , 0, asyncBlank)) // GRANT
+        })
     })
 
+    let validLine1 = [
+       //00000000000000000000000000000000'
+        '1Real Madrid - Barcelona',
+        '0Bitcoin - Ethereum',
+        '1Team 3.1 - Team 3.2',
+        '1Team 4.1 - Team 4.2',
+        '1Team 5.1 - Team 5.2',
+        '1Team 6.1 - Team 6.2',
+        '1Team 7.1 - Team 7.2',
+        '1Team 8.1 - Team 8.2',
+        '1Team 9.1 - Team 9.2',
+        '1Team 10.1 - Team 10.2',
+        '1Team 11.1 - Team 11.2'
+        // bets deadline
+        // distribution deadline => can be moved to finalise
+    ]
+
     describe('Line creation:', () => {
-        it('should ✅ successfully create line', () => {})
+        beforeEach(async () => {
+            await customContractFunctionCall(_owner, 'grantLotter', [_lotter] , 0, asyncBlank) // GRANT
+        })
+
+        it.only('should ✅ successfully create line', async () => {
+            let lastCreatedLine = +(await instance.lastCreatedLine.call());
+            let txHash = await customContractFunctionCall(_lotter, 'createLine', validLine1, 0, asyncBlank);
+            console.log(chalk.red(JSON.stringify(web3.eth.getTransactionReceipt(txHash).logs)));
+            let lineNumber = +web3.eth.getTransactionReceipt(txHash).logs[0].data;
+            assert.deepEqual(lineNumber, lastCreatedLine+1, 'ID should be 1');
+            let line1pair1 = await instance.getLine.call(lineNumber, 0)
+            console.log(`line1: ${JSON.stringify(line1pair1)}`)
+        });
+
         it('should ❌ fail create line without 11 events', () => {})
         it('should ❌ fail create line with more than 11 events', () => {})
         it('should ❌ fail create line if user has no lotter role', () => {})
