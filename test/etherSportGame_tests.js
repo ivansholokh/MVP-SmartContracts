@@ -247,7 +247,13 @@ contract('EtherSportGame', function (accounts) {
             console.log(`line1 bet: ${JSON.stringify(line1pair0bet)}`)
             let line1balance = +(await instance.getLineBalance.call(lineNumber))
             console.log(`line1 balance: ${JSON.stringify(line1balance)}`)
-            //-
+
+            let ticketsLength = +(await instance.getLineTicketsLength.call(lineNumber));
+            let getLineTicketAddressById = await instance.getLineTicketAddressById.call(lineNumber, ticketsLength-1)
+            console.log(`ticketsLength ${ticketsLength}, getLineTicketAddressById ${getLineTicketAddressById}`)
+            assert.deepEqual(getLineTicketAddressById, _other, 'check address')
+
+            //Check balances
             let contractESCBalance = await instance.balanceOf.call(instance.address);
             let otherESCBalance = await instance.balanceOf.call(_other);
             console.log(`contractESCBalance ${contractESCBalance}, otherESCBalance ${otherESCBalance}`)
