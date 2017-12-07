@@ -26,6 +26,7 @@ contract EtherSportGame is StandardToken {
         string[] pairs;
         bool[] canDraw;
         uint8[] winner;
+        bool isFinished;
         uint ticketPriceESC;
         uint balance;
         mapping (address => uint8[]) tickets;
@@ -42,6 +43,10 @@ contract EtherSportGame is StandardToken {
 
     function getLinePairWinner(uint256 lineId, uint pairId) constant public returns(uint8) {
         return lines[lineId].winner[pairId];
+    }
+
+    function getLineIsFinished(uint256 lineId) constant public returns(bool) {
+        return lines[lineId].isFinished;
     }
 
     function getLinePrice(uint256 lineId) constant public returns(uint) {
@@ -153,7 +158,7 @@ contract EtherSportGame is StandardToken {
         string[] memory s = new string[](11);
         bool[] memory b = new bool[](11);
         uint8[] memory u = new uint8[](11);
-        lines[lastCreatedLine] = Line(s, b, u, tokenUnit, 0);
+        lines[lastCreatedLine] = Line(s, b, u, false, tokenUnit, 0);
         initLinePair(0 , pair0 );
         initLinePair(1 , pair1 );
         initLinePair(2 , pair2 );
@@ -199,6 +204,7 @@ contract EtherSportGame is StandardToken {
         fillLinePairWinner(lineId, 8 , pair8 );
         fillLinePairWinner(lineId, 9 , pair9 );
         fillLinePairWinner(lineId, 10, pair10);
+        lines[lineId].isFinished = true;
     }
 
     // winner: 0 = draw, 1 win team 1 (left), 2 win team 2 (right)
@@ -221,9 +227,9 @@ contract EtherSportGame is StandardToken {
         uint8 pair9,
         uint8 pair10
     ) public {
-        require(balances[msg.sender] >= lines[lastCreatedLine].ticketPriceESC);
-        uint8[] memory u = new uint8[](11);
-        lines[lineId].tickets[msg.sender] = u;
+        require(!lines[lineId].isFinished);
+        require(balances[msg.sender] >= lines[lineId].ticketPriceESC);
+        lines[lineId].tickets[msg.sender] = new uint8[](11);
         fillLinePairTicket(lineId, 0 , pair0 );
         fillLinePairTicket(lineId, 1 , pair1 );
         fillLinePairTicket(lineId, 2 , pair2 );
@@ -235,11 +241,17 @@ contract EtherSportGame is StandardToken {
         fillLinePairTicket(lineId, 8 , pair8 );
         fillLinePairTicket(lineId, 9 , pair9 );
         fillLinePairTicket(lineId, 10, pair10);
-        balances[msg.sender] = balances[msg.sender] - lines[lastCreatedLine].ticketPriceESC;
-        balances[address(this)] = balances[address(this)] + lines[lastCreatedLine].ticketPriceESC;
-        lines[lastCreatedLine].balance += lines[lastCreatedLine].ticketPriceESC;
-        Transfer(msg.sender, address(this), lines[lastCreatedLine].ticketPriceESC);
+        uint ticketPrice = lines[lineId].ticketPriceESC;
+        balances[msg.sender]    -= ticketPrice;
+        balances[address(this)] += ticketPrice;
+        lines[lineId].balance   += ticketPrice;
+        Transfer(msg.sender, address(this), ticketPrice);
     }
 
-
+    function distributeWin (
+        uint lineId
+    ) public {
+        require(!lines[lineId].isFinished);
+        require(lines[lastCreatedLine].ticketPriceESC > 0);
+    }
 }
