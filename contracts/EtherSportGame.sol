@@ -24,12 +24,16 @@ contract EtherSportGame is StandardToken {
     event CreateLine(uint256 _lineId);
     struct Line {
         string[] pairs;
-        string[] canDraw;
+        bool[] canDraw;
     }
     mapping (uint256 => Line) lines;
 
-    function getLine(uint256 lineId, uint pairId) constant public returns(string) {
+    function getLinePairName(uint256 lineId, uint pairId) constant public returns(string) {
         return lines[lineId].pairs[pairId];
+    }
+
+    function getLinePairCanDraw(uint256 lineId, uint pairId) constant public returns(bool) {
+        return lines[lineId].canDraw[pairId];
     }
 
     /*
@@ -100,6 +104,13 @@ contract EtherSportGame is StandardToken {
         lotters[_lotter] = false;
     }
 
+
+    function  initLinePair(uint id, string pair) internal {
+        bytes memory b = bytes(pair);
+        lines[lastCreatedLine].canDraw[id] = b[0] == '1';
+        lines[lastCreatedLine].pairs[id] = pair;
+    }
+
     // https://github.com/ethereum/solidity/issues/267
     //
     // It depends on how complex the expressions inside the function are,
@@ -120,19 +131,23 @@ contract EtherSportGame is StandardToken {
         string pair10
     ) onlyByLotter() public {
         lastCreatedLine = lastCreatedLine + 1;
-        string[] memory a = new string[](11);
-        lines[lastCreatedLine] = Line(a);
-        lines[lastCreatedLine].pairs[0] = pair0;
-        lines[lastCreatedLine].pairs[1] = pair1;
-        lines[lastCreatedLine].pairs[2] = pair2;
-        lines[lastCreatedLine].pairs[3] = pair3;
-        lines[lastCreatedLine].pairs[4] = pair4;
-        lines[lastCreatedLine].pairs[5] = pair5;
-        lines[lastCreatedLine].pairs[6] = pair6;
-        lines[lastCreatedLine].pairs[7] = pair7;
-        lines[lastCreatedLine].pairs[8] = pair8;
-        lines[lastCreatedLine].pairs[9] = pair9;
-        lines[lastCreatedLine].pairs[10] = pair10;
+        string[] memory s = new string[](11);
+        bool[] memory b = new bool[](11);
+        lines[lastCreatedLine] = Line(s, b);
+        initLinePair(0 , pair0 );
+        initLinePair(1 , pair1 );
+        initLinePair(2 , pair2 );
+        initLinePair(3 , pair3 );
+        initLinePair(4 , pair4 );
+        initLinePair(5 , pair5 );
+        initLinePair(6 , pair6 );
+        initLinePair(7 , pair7 );
+        initLinePair(8 , pair8 );
+        initLinePair(9 , pair9 );
+        initLinePair(10, pair10);
         CreateLine(lastCreatedLine);
     }
+
+
+
 }

@@ -110,14 +110,27 @@ contract('EtherSportGame', function (accounts) {
             await customContractFunctionCall(_owner, 'grantLotter', [_lotter] , 0, asyncBlank) // GRANT
         })
 
-        it.only('should ✅ successfully create line', async () => {
+        it('should ✅ successfully create line', async () => {
             let lastCreatedLine = +(await instance.lastCreatedLine.call());
             let txHash = await customContractFunctionCall(_lotter, 'createLine', validLine1, 0, asyncBlank);
             console.log(chalk.red(JSON.stringify(web3.eth.getTransactionReceipt(txHash).logs)));
             let lineNumber = +web3.eth.getTransactionReceipt(txHash).logs[0].data;
             assert.deepEqual(lineNumber, lastCreatedLine+1, 'ID should be 1');
-            let line1pair1 = await instance.getLine.call(lineNumber, 0)
-            console.log(`line1: ${JSON.stringify(line1pair1)}`)
+            // line 1 pair 0
+            let line1pair0name = await instance.getLinePairName.call(lineNumber, 0)
+            console.log(`line1: ${JSON.stringify(line1pair0name)}`)
+            let line1pair0draw = await instance.getLinePairCanDraw.call(lineNumber, 0)
+            console.log(`line1: ${JSON.stringify(line1pair0draw)}`)
+            assert.deepEqual(line1pair0name, validLine1[0], 'line 1 pair 0 name')
+            assert.deepEqual(line1pair0draw, !!+validLine1[0][0], 'line 1 pair 0 canDraw')
+            // line 1 pair 1
+            let line1pair1name = await instance.getLinePairName.call(lineNumber, 1)
+            console.log(`line1: ${JSON.stringify(line1pair1name)}`)
+            let line1pair1draw = await instance.getLinePairCanDraw.call(lineNumber, 1)
+            console.log(`line1: ${JSON.stringify(line1pair1draw)}`)
+            assert.deepEqual(line1pair1name, validLine1[1], `line 1 pair 1 name ${validLine1[1]}`)
+            assert.deepEqual(line1pair1draw, !!+validLine1[1][0], `line 1 pair 1 canDraw ${validLine1[1]} ${!!validLine1[1][0]}`)
+
         });
 
         it('should ❌ fail create line without 11 events', () => {})
