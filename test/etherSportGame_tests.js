@@ -133,6 +133,8 @@ contract('EtherSportGame', function (accounts) {
         1, // pair 10, win team 1
     ]
 
+    let one_esc = Math.pow(10,18);
+
     describe('Line creation:', () => {
         beforeEach(async () => {
             await customContractFunctionCall(_owner, 'grantLotter', [_lotter] , 0, asyncBlank) // GRANT
@@ -161,9 +163,19 @@ contract('EtherSportGame', function (accounts) {
 
         });
 
-        it('should ❌ fail create line without 11 events', () => {})
-        it('should ❌ fail create line with more than 11 events', () => {})
-        it('should ❌ fail create line if user has no lotter role', () => {})
+        it.skip('should ❌ fail create line without 11 events', () => {})
+        it.skip('should ❌ fail create line with more than 11 events', () => {})
+        it.skip('should ❌ fail create line if user has no lotter role', () => {})
+    })
+
+    describe.skip('Set line additional data', () => {
+        let lineNumber
+
+        beforeEach(async () => {
+            await customContractFunctionCall(_owner, 'grantLotter', [_lotter] , 0, asyncBlank) // GRANT
+            let txHash = await customContractFunctionCall(_lotter, 'createLine', validLine1, 0, asyncBlank);
+            lineNumber = +web3.eth.getTransactionReceipt(txHash).logs[0].data;
+        })
     })
 
     describe('Line filling with results:', () => {
@@ -189,21 +201,21 @@ contract('EtherSportGame', function (accounts) {
             assert.deepEqual(line1pair0winner, +validResultForLine1[0], 'line 1 pair 0 winner')
 
         })
-        it('should ❌ fail fill line with results with wrong permission', () => {})
-        it('should ❌ fail fill line with results before last event finish', () => {})
-        it('should ❌ fail fill line with results it already filled', () => {})
-        it('should ❌ fail fill line with results with incorrect result', () => {})
-        it('should ❌ fail fill line with results with incorrect arguments number', () => {})
+        it.skip('should ❌ fail fill line with results with wrong permission', () => {})
+        it.skip('should ❌ fail fill line with results before last event finish', () => {})
+        it.skip('should ❌ fail fill line with results it already filled', () => {})
+        it.skip('should ❌ fail fill line with results with incorrect result', () => {})
+        it.skip('should ❌ fail fill line with results with incorrect arguments number', () => {})
     })
 
-    describe('Line distribute prize:', () => {
+    describe.skip('Line distribute prize:', () => {
         it('should ✅ successfully for 1 winner', () => {})
         it('should ✅ successfully for few winners for same prize', () => {})
         it('should ✅ successfully for many winners for many prizes', () => {})
         it('should ❌ fail', () => {})
     })
 
-    describe('Sell esc:', () => {
+    describe.skip('Sell esc:', () => {
         it('should ✅ successfully set esc to sale', () => {})
         it('should ✅ successfully remove esc from sale', () => {})
         it('should ✅ successfully got eth for selled esc', () => {})
@@ -212,12 +224,43 @@ contract('EtherSportGame', function (accounts) {
     })
 
     describe('Buy ticket', () => {
-        it('should ✅ successfully but ticket for esc', () => {})
+        let lineNumber
+
+        beforeEach(async () => {
+            await customContractFunctionCall(_owner, 'grantLotter', [_lotter] , 0, asyncBlank) // GRANT
+            await customContractFunctionCall(_other, 'claimTokens', '___empty___', web3.toWei(1), asyncBlank);
+            let txHash = await customContractFunctionCall(_lotter, 'createLine', validLine1, 0, asyncBlank);
+            lineNumber = +web3.eth.getTransactionReceipt(txHash).logs[0].data;
+        })
+
+        it('should ✅ successfully but ticket for esc', async () => {
+            let contractESCBalanceBefore = await instance.balanceOf.call(instance.address);
+            let otherESCBalanceBefore = await instance.balanceOf.call(_other);
+            console.log(`contractESCBalance ${contractESCBalanceBefore}, otherESCBalance ${otherESCBalanceBefore}`)
+            let txHash = await customContractFunctionCall(_other, 'buyTicket', [lineNumber, ...validResultForLine1], 0, asyncBlank);
+            console.log(chalk.blue(JSON.stringify(web3.eth.getTransactionReceipt(txHash).logs)));
+            let line1pair0name = await instance.getLinePairName.call(lineNumber, 0)
+            console.log(`line1 pair: ${JSON.stringify(line1pair0name)}`)
+            let line1pair0draw = await instance.getLinePairCanDraw.call(lineNumber, 0)
+            console.log(`line1 canDraw: ${JSON.stringify(line1pair0draw)}`)
+            let line1pair0bet = +(await instance.getLineTicketPairBet.call(lineNumber, _other ,0))
+            console.log(`line1 bet: ${JSON.stringify(line1pair0bet)}`)
+            let line1balance = +(await instance.getLineBalance.call(lineNumber))
+            console.log(`line1 balance: ${JSON.stringify(line1balance)}`)
+
+            //-
+            let contractESCBalance = await instance.balanceOf.call(instance.address);
+            let otherESCBalance = await instance.balanceOf.call(_other);
+            console.log(`contractESCBalance ${contractESCBalance}, otherESCBalance ${otherESCBalance}`)
+            assert.deepEqual(contractESCBalance - contractESCBalanceBefore, one_esc, 'contract balance diff')
+            assert.deepEqual(otherESCBalanceBefore - otherESCBalance, one_esc, 'player balance diff')
+            assert.deepEqual(line1balance, one_esc, 'line balance')
+        })
         it('should ✅ successfully', () => {})
         it('should ❌ fail', () => {})
     })
 
-    describe('...:', () => {
+    describe.skip('...:', () => {
         it('should ✅ successfully', () => {})
         it('should ❌ fail', () => {})
     })

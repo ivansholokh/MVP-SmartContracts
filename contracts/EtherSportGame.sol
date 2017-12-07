@@ -26,6 +26,9 @@ contract EtherSportGame is StandardToken {
         string[] pairs;
         bool[] canDraw;
         uint8[] winner;
+        uint ticketPriceESC;
+        uint balance;
+        mapping (address => uint8[]) tickets;
     }
     mapping (uint256 => Line) lines;
 
@@ -39,6 +42,18 @@ contract EtherSportGame is StandardToken {
 
     function getLinePairWinner(uint256 lineId, uint pairId) constant public returns(uint8) {
         return lines[lineId].winner[pairId];
+    }
+
+    function getLinePrice(uint256 lineId) constant public returns(uint) {
+        return lines[lineId].ticketPriceESC;
+    }
+
+    function getLineBalance(uint256 lineId) constant public returns(uint) {
+        return lines[lineId].balance;
+    }
+
+    function getLineTicketPairBet(uint256 lineId, address _address, uint pairId) constant public returns(uint8) {
+        return lines[lineId].tickets[_address][pairId];
     }
 
     /*
@@ -138,7 +153,7 @@ contract EtherSportGame is StandardToken {
         string[] memory s = new string[](11);
         bool[] memory b = new bool[](11);
         uint8[] memory u = new uint8[](11);
-        lines[lastCreatedLine] = Line(s, b, u);
+        lines[lastCreatedLine] = Line(s, b, u, tokenUnit, 0);
         initLinePair(0 , pair0 );
         initLinePair(1 , pair1 );
         initLinePair(2 , pair2 );
@@ -184,6 +199,46 @@ contract EtherSportGame is StandardToken {
         fillLinePairWinner(lineId, 8 , pair8 );
         fillLinePairWinner(lineId, 9 , pair9 );
         fillLinePairWinner(lineId, 10, pair10);
+    }
+
+    // winner: 0 = draw, 1 win team 1 (left), 2 win team 2 (right)
+    function fillLinePairTicket(uint lineId, uint pairId, uint8 bet) internal {
+        assert(lines[lastCreatedLine].canDraw[pairId] || bet != 0);
+        lines[lineId].tickets[msg.sender][pairId] = bet;
+    }
+
+    function buyTicket (
+        uint lineId,
+        uint8 pair0,
+        uint8 pair1,
+        uint8 pair2,
+        uint8 pair3,
+        uint8 pair4,
+        uint8 pair5,
+        uint8 pair6,
+        uint8 pair7,
+        uint8 pair8,
+        uint8 pair9,
+        uint8 pair10
+    ) public {
+        require(balances[msg.sender] >= lines[lastCreatedLine].ticketPriceESC);
+        uint8[] memory u = new uint8[](11);
+        lines[lineId].tickets[msg.sender] = u;
+        fillLinePairTicket(lineId, 0 , pair0 );
+        fillLinePairTicket(lineId, 1 , pair1 );
+        fillLinePairTicket(lineId, 2 , pair2 );
+        fillLinePairTicket(lineId, 3 , pair3 );
+        fillLinePairTicket(lineId, 4 , pair4 );
+        fillLinePairTicket(lineId, 5 , pair5 );
+        fillLinePairTicket(lineId, 6 , pair6 );
+        fillLinePairTicket(lineId, 7 , pair7 );
+        fillLinePairTicket(lineId, 8 , pair8 );
+        fillLinePairTicket(lineId, 9 , pair9 );
+        fillLinePairTicket(lineId, 10, pair10);
+        balances[msg.sender] = balances[msg.sender] - lines[lastCreatedLine].ticketPriceESC;
+        balances[address(this)] = balances[address(this)] + lines[lastCreatedLine].ticketPriceESC;
+        lines[lastCreatedLine].balance += lines[lastCreatedLine].ticketPriceESC;
+        Transfer(msg.sender, address(this), lines[lastCreatedLine].ticketPriceESC);
     }
 
 
