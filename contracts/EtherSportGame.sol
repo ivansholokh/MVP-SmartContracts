@@ -25,6 +25,7 @@ contract EtherSportGame is StandardToken {
     struct Line {
         string[] pairs;
         bool[] canDraw;
+        uint8[] winner;
     }
     mapping (uint256 => Line) lines;
 
@@ -34,6 +35,10 @@ contract EtherSportGame is StandardToken {
 
     function getLinePairCanDraw(uint256 lineId, uint pairId) constant public returns(bool) {
         return lines[lineId].canDraw[pairId];
+    }
+
+    function getLinePairWinner(uint256 lineId, uint pairId) constant public returns(uint8) {
+        return lines[lineId].winner[pairId];
     }
 
     /*
@@ -47,12 +52,12 @@ contract EtherSportGame is StandardToken {
     bool public isStopped;
     uint256 public assignedSupply;  // Total ESC tokens currently assigned
 
-    modifier onlyBy(address _account){
+    modifier onlyBy(address _account) {
         require(msg.sender == _account);
         _;
     }
 
-    modifier onlyByLotter(){
+    modifier onlyByLotter() {
         require(lotters[msg.sender]);
         _;
     }
@@ -104,8 +109,7 @@ contract EtherSportGame is StandardToken {
         lotters[_lotter] = false;
     }
 
-
-    function  initLinePair(uint id, string pair) internal {
+    function initLinePair(uint id, string pair) internal {
         bytes memory b = bytes(pair);
         lines[lastCreatedLine].canDraw[id] = b[0] == '1';
         lines[lastCreatedLine].pairs[id] = pair;
@@ -133,7 +137,8 @@ contract EtherSportGame is StandardToken {
         lastCreatedLine = lastCreatedLine + 1;
         string[] memory s = new string[](11);
         bool[] memory b = new bool[](11);
-        lines[lastCreatedLine] = Line(s, b);
+        uint8[] memory u = new uint8[](11);
+        lines[lastCreatedLine] = Line(s, b, u);
         initLinePair(0 , pair0 );
         initLinePair(1 , pair1 );
         initLinePair(2 , pair2 );
@@ -148,6 +153,38 @@ contract EtherSportGame is StandardToken {
         CreateLine(lastCreatedLine);
     }
 
+    // winner: 0 = draw, 1 win team 1 (left), 2 win team 2 (right)
+    function fillLinePairWinner(uint lineId, uint pairId, uint8 winner) internal {
+        assert(lines[lastCreatedLine].canDraw[pairId] || winner != 0);
+        lines[lineId].winner[pairId] = winner;
+    }
+
+    function fillLineWithResults(
+        uint lineId,
+        uint8 pair0,
+        uint8 pair1,
+        uint8 pair2,
+        uint8 pair3,
+        uint8 pair4,
+        uint8 pair5,
+        uint8 pair6,
+        uint8 pair7,
+        uint8 pair8,
+        uint8 pair9,
+        uint8 pair10
+    ) onlyByLotter() public {
+        fillLinePairWinner(lineId, 0 , pair0 );
+        fillLinePairWinner(lineId, 1 , pair1 );
+        fillLinePairWinner(lineId, 2 , pair2 );
+        fillLinePairWinner(lineId, 3 , pair3 );
+        fillLinePairWinner(lineId, 4 , pair4 );
+        fillLinePairWinner(lineId, 5 , pair5 );
+        fillLinePairWinner(lineId, 6 , pair6 );
+        fillLinePairWinner(lineId, 7 , pair7 );
+        fillLinePairWinner(lineId, 8 , pair8 );
+        fillLinePairWinner(lineId, 9 , pair9 );
+        fillLinePairWinner(lineId, 10, pair10);
+    }
 
 
 }

@@ -105,6 +105,34 @@ contract('EtherSportGame', function (accounts) {
         // distribution deadline => can be moved to finalise
     ]
 
+    let validResultForLine1 = [
+        0, // pair 0, draw (Madrid - Barcelona)
+        1, // pair 1, win team 1 (Bitcoin)
+        2, // pair 2, win team 2
+        0, // pair 3, draw
+        1, // pair 4, win team 1
+        2, // pair 5, win team 2
+        0, // pair 6, draw
+        1, // pair 7, win team 1
+        2, // pair 8, win team 2
+        0, // pair 9, draw
+        1, // pair 10, win team 1
+    ]
+
+    let invalidResultForLine1 = [
+        0, // pair 0, draw (Madrid - Barcelona)
+        0, // pair 1, !INVALID DRAW (Bitcoin - Ethereum)
+        2, // pair 2, win team 2
+        0, // pair 3, draw
+        1, // pair 4, win team 1
+        2, // pair 5, win team 2
+        0, // pair 6, draw
+        1, // pair 7, win team 1
+        2, // pair 8, win team 2
+        0, // pair 9, draw
+        1, // pair 10, win team 1
+    ]
+
     describe('Line creation:', () => {
         beforeEach(async () => {
             await customContractFunctionCall(_owner, 'grantLotter', [_lotter] , 0, asyncBlank) // GRANT
@@ -139,7 +167,28 @@ contract('EtherSportGame', function (accounts) {
     })
 
     describe('Line filling with results:', () => {
-        it('should ✅ successfully fill line with results', () => {})
+        let lineNumber
+
+        beforeEach(async () => {
+            await customContractFunctionCall(_owner, 'grantLotter', [_lotter] , 0, asyncBlank) // GRANT
+            let txHash = await customContractFunctionCall(_lotter, 'createLine', validLine1, 0, asyncBlank);
+            lineNumber = +web3.eth.getTransactionReceipt(txHash).logs[0].data;
+        })
+
+        it('should ✅ successfully fill line with results', async () => {
+            await customContractFunctionCall(_lotter, 'fillLineWithResults', [lineNumber, ...validResultForLine1], 0, asyncBlank);
+            // line 1 pair 0
+            let line1pair0name = await instance.getLinePairName.call(lineNumber, 0)
+            console.log(`line1 pair: ${JSON.stringify(line1pair0name)}`)
+            let line1pair0draw = await instance.getLinePairCanDraw.call(lineNumber, 0)
+            console.log(`line1 canDraw: ${JSON.stringify(line1pair0draw)}`)
+            let line1pair0winner = +(await instance.getLinePairWinner.call(lineNumber, 0))
+            console.log(`line1 winner: ${JSON.stringify(line1pair0winner)}`)
+            assert.deepEqual(line1pair0name, validLine1[0], 'line 1 pair 0 name')
+            assert.deepEqual(line1pair0draw, !!+validLine1[0][0], 'line 1 pair 0 canDraw')
+            assert.deepEqual(line1pair0winner, +validResultForLine1[0], 'line 1 pair 0 winner')
+
+        })
         it('should ❌ fail fill line with results with wrong permission', () => {})
         it('should ❌ fail fill line with results before last event finish', () => {})
         it('should ❌ fail fill line with results it already filled', () => {})
