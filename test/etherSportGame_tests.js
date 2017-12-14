@@ -233,7 +233,7 @@ contract('EtherSportGame', function (accounts) {
             lineNumber = +web3.eth.getTransactionReceipt(txHash).logs[0].data;
         })
 
-        it('should ✅ successfully but ticket for esc', async () => {
+        it.only('should ✅ successfully but ticket for esc', async () => {
             let contractESCBalanceBefore = await instance.balanceOf.call(instance.address);
             let otherESCBalanceBefore = await instance.balanceOf.call(_other);
             console.log(`contractESCBalance ${contractESCBalanceBefore}, otherESCBalance ${otherESCBalanceBefore}`)
@@ -243,7 +243,7 @@ contract('EtherSportGame', function (accounts) {
             console.log(`line1 pair: ${JSON.stringify(line1pair0name)}`)
             let line1pair0draw = await instance.getLinePairCanDraw.call(lineNumber, 0)
             console.log(`line1 canDraw: ${JSON.stringify(line1pair0draw)}`)
-            let line1pair0bet = +(await instance.getLineTicketPairBet.call(lineNumber, _other ,0))
+            let line1pair0bet = +(await instance.getLineTicketPairBet.call(lineNumber, 0 ,0))
             console.log(`line1 bet: ${JSON.stringify(line1pair0bet)}`)
             let line1balance = +(await instance.getLineBalance.call(lineNumber))
             console.log(`line1 balance: ${JSON.stringify(line1balance)}`)

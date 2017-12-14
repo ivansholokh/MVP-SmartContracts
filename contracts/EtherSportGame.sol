@@ -24,16 +24,20 @@ contract EtherSportGame is StandardToken {
     //===============================//0  1  2  3  4  5  6  7   8   9  10   11
     uint[] public distributionModel = [0, 0, 0, 0, 0, 0, 0, 8, 10, 15, 22, 100];
     event CreateLine(uint256 _lineId);
+    struct Ticket {
+        address ticketOwner;
+        uint8[] bet;
+    }
     struct Line {
         string[] pairs;
         bool[] canDraw;
         uint8[] winner;
+        bool onSale;
         bool isFinished;
         uint ticketPriceESC;
         uint balance;
         uint ticketsLength;
-        mapping (address => uint8[]) tickets;
-        mapping (uint => address) ticketsIndex;
+        mapping (uint => Ticket) ticketsIndex;
     }
     mapping (uint256 => Line) lines;
 
@@ -66,11 +70,11 @@ contract EtherSportGame is StandardToken {
     }
 
     function getLineTicketAddressById(uint256 lineId, uint ticketId) constant public returns(address) {
-        return lines[lineId].ticketsIndex[ticketId];
+        return lines[lineId].ticketsIndex[ticketId].ticketOwner;
     }
 
-    function getLineTicketPairBet(uint256 lineId, address _address, uint pairId) constant public returns(uint8) {
-        return lines[lineId].tickets[_address][pairId];
+    function getLineTicketPairBet(uint256 lineId, uint ticketId, uint pairId) constant public returns(uint8) {
+        return lines[lineId].ticketsIndex[ticketId].bet[pairId];
     }
 
     /*
@@ -170,7 +174,7 @@ contract EtherSportGame is StandardToken {
         string[] memory s = new string[](11);
         bool[] memory b = new bool[](11);
         uint8[] memory u = new uint8[](11);
-        lines[lastCreatedLine] = Line(s, b, u, false, tokenUnit, 0, 0);
+        lines[lastCreatedLine] = Line(s, b, u, true, false, tokenUnit, 0, 0);
         initLinePair(0 , pair0 );
         initLinePair(1 , pair1 );
         initLinePair(2 , pair2 );
@@ -185,9 +189,13 @@ contract EtherSportGame is StandardToken {
         CreateLine(lastCreatedLine);
     }
 
+    function lineCloseSales(uint lineId) onlyByLotter() public {
+        lines[lineId].onSale = false;
+    }
+
     // winner: 0 = draw, 1 win team 1 (left), 2 win team 2 (right)
     function fillLinePairWinner(uint lineId, uint pairId, uint8 winner) internal {
-        assert(lines[lastCreatedLine].canDraw[pairId] || winner != 0);
+        assert(lines[lineId].canDraw[pairId] || winner != 0);
         lines[lineId].winner[pairId] = winner;
     }
 
@@ -221,33 +229,25 @@ contract EtherSportGame is StandardToken {
 
     // winner: 0 = draw, 1 win team 1 (left), 2 win team 2 (right)
     function fillLinePairTicket(uint lineId, uint pairId, uint8 bet) internal {
-        assert(lines[lastCreatedLine].canDraw[pairId] || bet != 0);
-        lines[lineId].tickets[msg.sender][pairId] = bet;
+        assert(lines[lineId].canDraw[pairId] || bet != 0);
+        uint ticketId = lines[lineId].ticketsLength - 1;
+        lines[lineId].ticketsIndex[ticketId].bet[pairId] = bet;
     }
 
     function updateTicketsIndex(uint lineId) internal {
+        uint8[] memory b = new uint8[](11);
         uint ticketId = lines[lineId].ticketsLength;
-        lines[lineId].ticketsIndex[ticketId] = msg.sender;
+        lines[lineId].ticketsIndex[ticketId] = Ticket(msg.sender, b);
+        lines[lineId].ticketsIndex[ticketId].ticketOwner = msg.sender;
         lines[lineId].ticketsLength++;
     }
 
     function buyTicket (
-        uint lineId,
-        uint8 pair0,
-        uint8 pair1,
-        uint8 pair2,
-        uint8 pair3,
-        uint8 pair4,
-        uint8 pair5,
-        uint8 pair6,
-        uint8 pair7,
-        uint8 pair8,
-        uint8 pair9,
-        uint8 pair10
+        uint lineId, uint8 pair0, uint8 pair1, uint8 pair2, uint8 pair3, uint8 pair4, uint8 pair5, uint8 pair6, uint8 pair7, uint8 pair8, uint8 pair9, uint8 pair10
     ) public {
+        require(lines[lineId].onSale);
         require(!lines[lineId].isFinished);
         require(balances[msg.sender] >= lines[lineId].ticketPriceESC);
-        lines[lineId].tickets[msg.sender] = new uint8[](11);
         updateTicketsIndex(lineId);
         fillLinePairTicket(lineId, 0 , pair0 );
         fillLinePairTicket(lineId, 1 , pair1 );
@@ -272,5 +272,8 @@ contract EtherSportGame is StandardToken {
     ) public {
         require(!lines[lineId].isFinished);
         require(lines[lastCreatedLine].ticketPriceESC > 0);
+        for (uint i = 0; i < lines[lineId].ticketsLength; i++) {
+
+        }
     }
 }
