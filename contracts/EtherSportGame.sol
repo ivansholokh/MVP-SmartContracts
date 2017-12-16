@@ -158,17 +158,7 @@ contract EtherSportGame is StandardToken {
     // though: https://www.pivotaltracker.com/n/projects/1189488/stories/99085498
 
     function createLine(
-        string pair0,
-        string pair1,
-        string pair2,
-        string pair3,
-        string pair4,
-        string pair5,
-        string pair6,
-        string pair7,
-        string pair8,
-        string pair9,
-        string pair10
+        string pair0, string pair1, string pair2, string pair3, string pair4, string pair5, string pair6, string pair7, string pair8, string pair9, string pair10
     ) onlyByLotter() public {
         lastCreatedLine = lastCreatedLine + 1;
         string[] memory s = new string[](11);
@@ -195,23 +185,11 @@ contract EtherSportGame is StandardToken {
 
     // winner: 0 = draw, 1 win team 1 (left), 2 win team 2 (right)
     function fillLinePairWinner(uint lineId, uint pairId, uint8 winner) internal {
-        assert(lines[lineId].canDraw[pairId] || winner != 0);
-        lines[lineId].winner[pairId] = winner;
+        assert(lines[lineId].canDraw[pairId] || winner != 0);lines[lineId].winner[pairId] = winner;
     }
 
     function fillLineWithResults(
-        uint lineId,
-        uint8 pair0,
-        uint8 pair1,
-        uint8 pair2,
-        uint8 pair3,
-        uint8 pair4,
-        uint8 pair5,
-        uint8 pair6,
-        uint8 pair7,
-        uint8 pair8,
-        uint8 pair9,
-        uint8 pair10
+        uint lineId, uint8 pair0, uint8 pair1, uint8 pair2, uint8 pair3, uint8 pair4, uint8 pair5, uint8 pair6, uint8 pair7, uint8 pair8, uint8 pair9, uint8 pair10
     ) onlyByLotter() public {
         fillLinePairWinner(lineId, 0 , pair0 );
         fillLinePairWinner(lineId, 1 , pair1 );
@@ -267,13 +245,41 @@ contract EtherSportGame is StandardToken {
         Transfer(msg.sender, address(this), ticketPrice);
     }
 
+    event WinnerLog(uint lineId, uint guessNumber, uint guessWinnerQty);
+    event Winner(uint lineId, address winnerAddress, uint winnerPrize);
+    event Log(string comment, uint data);
+    mapping(uint => mapping(uint => address)) guessMap;
+
     function distributeWin (
         uint lineId
     ) public {
-        require(!lines[lineId].isFinished);
+        //require(!lines[lineId].isFinished);
         require(lines[lastCreatedLine].ticketPriceESC > 0);
-        for (uint i = 0; i < lines[lineId].ticketsLength; i++) {
-
+        uint guess;
+        uint8[] memory guessQty = new uint8[](11);
+        for (uint ticketId = 0; ticketId < lines[lineId].ticketsLength; ticketId++) {
+            guess = 0;
+            for (uint i = 0; i < 11; i++) {
+                if(lines[lineId].winner[i] == lines[lineId].ticketsIndex[ticketId].bet[i]) {
+                    guess++;
+                    if(guess >= 7) {
+                        guessMap[guess][guessQty[guess]] = lines[lineId].ticketsIndex[ticketId].ticketOwner;
+                        guessQty[guess]++;
+                    }
+                }
+            }
+        }
+        for(uint j = 7; j < 10; j++) {
+            if(guessQty[j] > 0) {
+                uint winTokens = lines[lineId].balance * distributionModel[j] / 100 / guessQty[j];
+                //Log('winTokens', winTokens);
+                for(uint k = 0; k < guessQty[j]; k++) {
+                    balances[guessMap[j][k]] += winTokens;
+                    balances[address(this)] -= winTokens;
+                    Transfer(address(this), guessMap[j][k], winTokens);
+                    Winner(lineId, guessMap[j][k], winTokens);
+                }
+            }
         }
     }
 }

@@ -23,4 +23,5 @@ Test smart contract:
 ```
 trpc
 truffle test
+./node_modules/.bin/solidity-coverage
 ```

@@ -2,6 +2,7 @@ const _ = require('underscore')
 const expectThrow = require('./utils').expectThrow
 const EtherSportGame = artifacts.require('EtherSportGame')
 const chalk = require('chalk')
+const SolidityCoder = require("web3/lib/solidity/coder.js");
 
 let instance
 let _startBlock
@@ -31,7 +32,7 @@ const customContractFunctionCall = (_userAddress, _func, _funcData, _wei, asyncC
         from: _userAddress,
         data: getData,
         value: _wei,
-        gas: 3000000
+        gas: 4000000
     }, async (err, transactionHash) => {
         asyncCallback(err, resolve, reject, transactionHash)
     });
@@ -117,6 +118,34 @@ contract('EtherSportGame', function (accounts) {
         2, // pair 8, win team 2
         0, // pair 9, draw
         1, // pair 10, win team 1
+    ]
+
+    let resultForLine1 = [
+        1, // pair 0, draw (Madrid - Barcelona)
+        1, // pair 1, win team 1 (Bitcoin)
+        1, // pair 2, win team 2
+        1, // pair 3, draw
+        1, // pair 4, win team 1
+        1, // pair 5, win team 2
+        1, // pair 6, draw
+        1, // pair 7, win team 1
+        1, // pair 8, win team 2
+        1, // pair 9, draw
+        1, // pair 10, win team 1
+    ]
+
+    let resultForLine1with7rightBets = [
+        1, // pair 0, draw (Madrid - Barcelona)
+        1, // pair 1, win team 1 (Bitcoin)
+        1, // pair 2, win team 2
+        1, // pair 3, draw
+        1, // pair 4, win team 1
+        1, // pair 5, win team 2
+        1, // pair 6, draw
+        0, // pair 7, win team 1
+        0, // pair 8, win team 2
+        0, // pair 9, draw
+        0, // pair 10, win team 1
     ]
 
     let invalidResultForLine1 = [
@@ -208,7 +237,33 @@ contract('EtherSportGame', function (accounts) {
         it.skip('should ❌ fail fill line with results with incorrect arguments number', () => {})
     })
 
-    describe.skip('Line distribute prize:', () => {
+    describe('Line distribute prize:', () => {
+        let lineNumber
+
+        beforeEach(async () => {
+            await customContractFunctionCall(_owner, 'grantLotter', [_lotter] , 0, asyncBlank) // GRANT
+            await customContractFunctionCall(_other, 'claimTokens', '___empty___', web3.toWei(1), asyncBlank);
+            let txHash = await customContractFunctionCall(_lotter, 'createLine', validLine1, 0, asyncBlank);
+            lineNumber = +web3.eth.getTransactionReceipt(txHash).logs[0].data;
+        })
+
+        it.only('should ✅ successfully for 1 winner', async () => {
+            let contractESCBalanceBefore = await instance.balanceOf.call(instance.address);
+            let otherESCBalanceBefore = await instance.balanceOf.call(_other);
+            console.log(`contractESCBalance ${contractESCBalanceBefore}, otherESCBalance ${otherESCBalanceBefore}`)
+            let txHash0 = await customContractFunctionCall(_other, 'buyTicket', [lineNumber, ...resultForLine1with7rightBets], 0, asyncBlank);
+            console.log(`txHash0 ${txHash0}`);
+            await customContractFunctionCall(_lotter, 'fillLineWithResults', [lineNumber, ...resultForLine1], 0, asyncBlank);
+            let txHash1 = await customContractFunctionCall(_other, 'distributeWin', [lineNumber], 0, asyncBlank);
+            console.log(`txHash1 ${txHash1}`);
+            let log, data;
+            for(let i = 0; i<web3.eth.getTransactionReceipt(txHash1).logs.length; i++){
+                log = web3.eth.getTransactionReceipt(txHash1).logs[i];
+                data = SolidityCoder.decodeParams(["string", "uint"], log.data.replace("0x", ""));
+                console.log(`data[${i}] ${data}`)
+            }
+        })
+        it('should ❌ fail', () => {})
         it('should ✅ successfully for 1 winner', () => {})
         it('should ✅ successfully for few winners for same prize', () => {})
         it('should ✅ successfully for many winners for many prizes', () => {})
@@ -233,7 +288,7 @@ contract('EtherSportGame', function (accounts) {
             lineNumber = +web3.eth.getTransactionReceipt(txHash).logs[0].data;
         })
 
-        it.only('should ✅ successfully but ticket for esc', async () => {
+        it('should ✅ successfully but ticket for esc', async () => {
             let contractESCBalanceBefore = await instance.balanceOf.call(instance.address);
             let otherESCBalanceBefore = await instance.balanceOf.call(_other);
             console.log(`contractESCBalance ${contractESCBalanceBefore}, otherESCBalance ${otherESCBalanceBefore}`)
